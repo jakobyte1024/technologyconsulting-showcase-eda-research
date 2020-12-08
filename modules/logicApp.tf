@@ -22,7 +22,7 @@ resource "azurerm_logic_app_action_custom" "logic_app_event_producer_action_1" {
                         {
                             "name": "i",
                             "type": "integer",
-                            "value": 0
+                            "value": 1
                         }
                     ]
                 },
@@ -40,49 +40,281 @@ resource "azurerm_logic_app_action_custom" "logic_app_event_producer_action_5" {
     logic_app_id = azurerm_logic_app_workflow.logic_app_event_producer.id
     body = <<BODY
     {
-        
-                "actions": {
-                    "HTTP": {
-                        "inputs": {
-                            "body": {
-                                "Address": {
-                                    "city": "Random-gibt-es-in-Logic-Apps-Nicht-Stadt",
-                                    "street": "Leider-Alle-Gleich-Straße @{variables('i')}",
-                                    "zip": "54321"
-                                },
-                                "id": "@variables('i')",
-                                "name": "Test User"
-                            },
-                            "method": "PUT",
-                            "uri": "https://${azurerm_function_app.customer_function_producer.default_hostname}/api/CustomerChanged"
-                        },
-                        "runAfter": {},
-                        "type": "Http"
-                    },
-                    "Increment_Variable": {
-                        "inputs": {
-                            "name": "i",
-                            "value": 1
-                        },
-                        "runAfter": {
-                            "HTTP": [
-                                "Succeeded"
-                            ]
-                        },
-                        "type": "IncrementVariable"
-                    }
-                },
-                "expression": "@equals(variables('i'), 50)",
-                "limit": {
-                    "count": 100,
-                    "timeout": "PT1H"
-                },
-                "runAfter": {
-                    "Initialize_variable": [
-                        "Succeeded"
-                    ]
-                },
-                "type": "Until"
+   "actions":{
+      "For_each":{
+         "actions":{
+            "CallCustomerChangedFunction":{
+               "inputs":{
+                  "body":{
+                     "address":{
+                        "city":"@{items('For_each')?['location']?['city']}",
+                        "street":"@{items('For_each')?['location']?['street']?['name']} @{items('For_each')?['location']?['street']?['number']}",
+                        "zip":"@{items('For_each')?['location']?['postcode']}"
+                     },
+                     "id":"@variables('i')",
+                     "name":"@{items('For_each')?['name']?['first']} @{items('For_each')?['name']?['last']}"
+                  },
+                  "method":"PUT",
+                  "uri":"https://${azurerm_function_app.customer_function_producer.default_hostname}/api/CustomerChanged"
+               },
+               "runAfter":{
+                  
+               },
+               "type":"Http"
             }
+         },
+         "foreach":"@body('Parse_JSON')?['results']",
+         "runAfter":{
+            "Parse_JSON":[
+               "Succeeded"
+            ]
+         },
+         "type":"Foreach"
+      },
+      "GetRandomPerson":{
+         "inputs":{
+            "method":"GET",
+            "uri":"https://randomuser.me/api/"
+         },
+         "runAfter":{
+            
+         },
+         "type":"Http"
+      },
+      "Increment_Variable":{
+         "inputs":{
+            "name":"i",
+            "value":1
+         },
+         "runAfter":{
+            "For_each":[
+               "Succeeded"
+            ]
+         },
+         "type":"IncrementVariable"
+      },
+      "Parse_JSON":{
+         "inputs":{
+            "content":"@body('GetRandomPerson')",
+            "schema":{
+               "properties":{
+                  "info":{
+                     "properties":{
+                        "page":{
+                           "type":"integer"
+                        },
+                        "results":{
+                           "type":"integer"
+                        },
+                        "seed":{
+                           "type":"string"
+                        },
+                        "version":{
+                           "type":"string"
+                        }
+                     },
+                     "type":"object"
+                  },
+                  "results":{
+                     "items":{
+                        "properties":{
+                           "cell":{
+                              "type":"string"
+                           },
+                           "dob":{
+                              "properties":{
+                                 "age":{
+                                    "type":"integer"
+                                 },
+                                 "date":{
+                                    "type":"string"
+                                 }
+                              },
+                              "type":"object"
+                           },
+                           "email":{
+                              "type":"string"
+                           },
+                           "gender":{
+                              "type":"string"
+                           },
+                           "id":{
+                              "properties":{
+                                 "name":{
+                                    "type":"string"
+                                 },
+                                 "value":{
+                                    
+                                 }
+                              },
+                              "type":"object"
+                           },
+                           "location":{
+                              "properties":{
+                                 "city":{
+                                    "type":"string"
+                                 },
+                                 "coordinates":{
+                                    "properties":{
+                                       "latitude":{
+                                          "type":"string"
+                                       },
+                                       "longitude":{
+                                          "type":"string"
+                                       }
+                                    },
+                                    "type":"object"
+                                 },
+                                 "country":{
+                                    "type":"string"
+                                 },
+                                 "postcode":{
+                                    "type":[
+                                       "string",
+                                       "integer"
+                                    ]
+                                 },
+                                 "state":{
+                                    "type":"string"
+                                 },
+                                 "street":{
+                                    "properties":{
+                                       "name":{
+                                          "type":"string"
+                                       },
+                                       "number":{
+                                          "type":"integer"
+                                       }
+                                    },
+                                    "type":"object"
+                                 },
+                                 "timezone":{
+                                    "properties":{
+                                       "description":{
+                                          "type":"string"
+                                       },
+                                       "offset":{
+                                          "type":"string"
+                                       }
+                                    },
+                                    "type":"object"
+                                 }
+                              },
+                              "type":"object"
+                           },
+                           "login":{
+                              "properties":{
+                                 "md5":{
+                                    "type":"string"
+                                 },
+                                 "password":{
+                                    "type":"string"
+                                 },
+                                 "salt":{
+                                    "type":"string"
+                                 },
+                                 "sha1":{
+                                    "type":"string"
+                                 },
+                                 "sha256":{
+                                    "type":"string"
+                                 },
+                                 "username":{
+                                    "type":"string"
+                                 },
+                                 "uuid":{
+                                    "type":"string"
+                                 }
+                              },
+                              "type":"object"
+                           },
+                           "name":{
+                              "properties":{
+                                 "first":{
+                                    "type":"string"
+                                 },
+                                 "last":{
+                                    "type":"string"
+                                 },
+                                 "title":{
+                                    "type":"string"
+                                 }
+                              },
+                              "type":"object"
+                           },
+                           "nat":{
+                              "type":"string"
+                           },
+                           "phone":{
+                              "type":"string"
+                           },
+                           "picture":{
+                              "properties":{
+                                 "large":{
+                                    "type":"string"
+                                 },
+                                 "medium":{
+                                    "type":"string"
+                                 },
+                                 "thumbnail":{
+                                    "type":"string"
+                                 }
+                              },
+                              "type":"object"
+                           },
+                           "registered":{
+                              "properties":{
+                                 "age":{
+                                    "type":"integer"
+                                 },
+                                 "date":{
+                                    "type":"string"
+                                 }
+                              },
+                              "type":"object"
+                           }
+                        },
+                        "required":[
+                           "gender",
+                           "name",
+                           "location",
+                           "email",
+                           "login",
+                           "dob",
+                           "registered",
+                           "phone",
+                           "cell",
+                           "id",
+                           "picture",
+                           "nat"
+                        ],
+                        "type":"object"
+                     },
+                     "type":"array"
+                  }
+               },
+               "type":"object"
+            }
+         },
+         "runAfter":{
+            "GetRandomPerson":[
+               "Succeeded"
+            ]
+         },
+         "type":"ParseJson"
+      }
+   },
+   "expression":"@equals(variables('i'), 11)",
+   "limit":{
+      "count":10,
+      "timeout":"PT1H"
+   },
+   "runAfter":{
+      "Initialize_variable":[
+         "Succeeded"
+      ]
+   },
+   "type":"Until"
+}
     BODY
 }
