@@ -1,0 +1,10 @@
+image: gitpod/workspace-full
+
+tasks:
+  - init: 'install func'
+    command: 'npm i -g azure-functions-core-tools@3 --unsafe-perm true'
+vscode:
+  extensions:
+    - eamodio.gitlens@10.2.1:WIWu3zHU4VPT8r/v866LUw==
+    - hashicorp.terraform@2.3.0:KgEabs4baG2MuLl5VL6Iyg==
+    - Pivotal.vscode-spring-boot@1.23.0:1iLvjTfznJrV611qRUeOHg==
